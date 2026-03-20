@@ -62,21 +62,14 @@ jobs:
           POSTGRES_DB: postgres
           REDIS_CACHE_HOST: localhost
           REDIS_RATE_LIMIT_HOST: localhost
-        # Generamos el XML que usará la siguiente acción
-        run: uv run pytest --cov=src --cov-report=xml
+        # Usamos --cov-report=term-missing para que el reporte salga en el log de la consola
+        # Y creamos un reporte HTML que es mucho más visual para humanos
+        run: |
+          uv run pytest --cov=src --cov-report=term-missing --cov-report=html
 
-      - name: Code Coverage Summary Report
-        uses: irongut/CodeCoverageSummary@v1.3.0
+      - name: Upload Coverage HTML
+        uses: actions/upload-artifact@v4
         with:
-          filename: coverage.xml
-          badge: true
-          fail_below_min: false
-          format: markdown
-          output: both
-
-      - name: Add Coverage PR Comment
-        uses: maroon1/pytest-coverage-comment@v1.0.1
-        if: github.event_name == 'pull_request'
-        with:
-          pytest-coverage-path: ./coverage.xml
+          name: coverage-report-html
+          path: htmlcov/
 
