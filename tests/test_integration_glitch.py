@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy.ext.asyncio import create_async_backend
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 import os
 
@@ -7,29 +7,27 @@ import os
 async def test_real_database_connection():
     """
     TEST DE INTEGRACIÓN REAL:
-    Este test intenta tocar el Postgres de GitHub Actions.
-    Si el boilerplate está mal configurado, este test explotará.
+    Corregido para usar create_async_engine directamente.
     """
-    # Intentamos obtener la URL de conexión del entorno
+    # Obtenemos los datos de las variables de entorno que configuramos en el YAML
     host = os.getenv("POSTGRES_SERVER", "localhost")
     port = os.getenv("POSTGRES_PORT", "5432")
     user = "postgres"
     password = "password"
     db = "fastapi_db"
     
-    # URL de conexión asíncrona (usando asyncpg)
+    # URL para asyncpg
     database_url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
     
-    print(f"\n🚀 Intentando conexión real a: {database_url}")
-    
-    from sqlalchemy.ext.asyncio import create_async_engine
+    # Creamos el motor asíncrono
     engine = create_async_engine(database_url)
     
-    async with engine.connect() as conn:
-        result = await conn.execute(text("SELECT 1"))
-        val = result.scalar()
-        assert val == 1
-        print("✅ ¡CONEXIÓN REAL EXITOSA! El glitch no está en la base de datos.")
-    
-    await engine.dispose()
+    try:
+        async with engine.connect() as conn:
+            # Esta es la prueba de fuego: ¿Podemos hablar con Postgres?
+            result = await conn.execute(text("SELECT 1"))
+            val = result.scalar()
+            assert val == 1
+    finally:
+        await engine.dispose()
 
