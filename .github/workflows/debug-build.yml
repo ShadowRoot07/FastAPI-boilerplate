@@ -51,6 +51,7 @@ jobs:
         run: python setup.py local
 
       - name: Install dependencies
+        # Al haberlo editado manualmente, uv sync instalará pytest-cov automáticamente
         run: uv sync --dev
 
       - name: Run Tests with Coverage
@@ -62,10 +63,8 @@ jobs:
           POSTGRES_DB: postgres
           REDIS_CACHE_HOST: localhost
           REDIS_RATE_LIMIT_HOST: localhost
-        # Usamos --cov-report=term-missing para que el reporte salga en el log de la consola
-        # Y creamos un reporte HTML que es mucho más visual para humanos
-        run: |
-          uv run pytest --cov=src --cov-report=term-missing --cov-report=html
+        # El comando ahora funcionará porque el plugin estará instalado
+        run: uv run pytest --cov=src --cov-report=term-missing --cov-report=html
 
       - name: Upload Coverage HTML
         uses: actions/upload-artifact@v4
