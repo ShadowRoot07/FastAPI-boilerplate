@@ -9,10 +9,8 @@ async def test_real_database_connection():
     host = os.getenv("POSTGRES_SERVER", "localhost")
     port = os.getenv("POSTGRES_PORT", "5432")
     user = os.getenv("POSTGRES_USER", "postgres")
-    # Intentamos leer la pass del entorno, si no existe, usamos 'pass'
-    password = os.getenv("POSTGRES_PASSWORD", "pass")
-    db = os.getenv("POSTGRES_DB", "fastapi_db")
-    
+    password = os.getenv("POSTGRES_PASSWORD", "password123")
+    db = os.getenv("POSTGRES_DB", "postgres")
     database_url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
     
     # Esto saldrá en los logs de GitHub si falla
