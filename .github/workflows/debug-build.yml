@@ -1,0 +1,74 @@
+name: Debug & Test Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - 'shadow/**'
+      - 'feat/**'
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Project Setup
+        run: python setup.py local
+
+      - name: Install dependencies
+        # Al haberlo editado manualmente, uv sync instalará pytest-cov automáticamente
+        run: uv sync --dev
+
+      - name: Run Tests with Coverage
+        env:
+          POSTGRES_SERVER: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ""
+          POSTGRES_DB: postgres
+          REDIS_CACHE_HOST: localhost
+          REDIS_RATE_LIMIT_HOST: localhost
+        # El comando ahora funcionará porque el plugin estará instalado
+        run: uv run pytest --cov=src --cov-report=term-missing --cov-report=html
+
+      - name: Upload Coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-html
+          path: htmlcov/
+
