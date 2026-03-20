@@ -9,19 +9,18 @@ on:
   pull_request:
     branches: [ main ]
 
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    # Definimos los servicios que necesita el boilerplate para no morir
     services:
       postgres:
         image: postgres:15
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
+          # Esto permite conectar sin contraseña en el entorno de pruebas
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -33,11 +32,6 @@ jobs:
         image: redis:7
         ports:
           - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -57,10 +51,13 @@ jobs:
         run: uv sync --dev
 
       - name: Run Tests
-        # Seteamos variables de entorno para que coincidan con los servicios de arriba
         env:
           POSTGRES_SERVER: localhost
           POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          # Mandamos vacío para que coincida con el modo 'trust'
+          POSTGRES_PASSWORD: ""
+          POSTGRES_DB: postgres
           REDIS_CACHE_HOST: localhost
           REDIS_RATE_LIMIT_HOST: localhost
         run: uv run pytest
