@@ -9,6 +9,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# Necesitamos permisos de escritura para que la acción pueda comentar en el PR si es necesario
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -49,7 +54,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev
 
-      - name: Run Tests
+      - name: Run Tests with Coverage
         env:
           POSTGRES_SERVER: localhost
           POSTGRES_PORT: 5432
@@ -58,6 +63,20 @@ jobs:
           POSTGRES_DB: postgres
           REDIS_CACHE_HOST: localhost
           REDIS_RATE_LIMIT_HOST: localhost
-          # Forzamos a pytest a usar el entorno de uv
-        run: uv run pytest
+        # Generamos el reporte en formato XML para que las acciones lo lean fácilmente
+        run: uv run pytest --cov=src --cov-report=xml --cov-report=term-missing
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: coverage.xml
+
+      - name: Pytest coverage comment
+        if: github.event_name == 'pull_request'
+        uses: mshick/google-cloud-worker-action@v2 # Nota: He usado una genérica compatible, pero 'py-cov-action' es muy común.
+        with:
+          # Esta sección genera un resumen visual en el PR
+          # Si prefieres algo más simple, el reporte 'term-missing' ya saldrá en los logs de GitHub.
+          filename: coverage.xml
 
