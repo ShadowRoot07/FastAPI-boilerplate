@@ -1,52 +1,45 @@
-from collections.abc import Callable, Generator
+from collections.abc import AsyncGenerator, Callable
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 from faker import Faker
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.session import Session
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from src.app.core.config import settings
 from src.app.main import app
 
+# Usamos el prefijo ASYNC para los tests
 DATABASE_URI = settings.POSTGRES_URI
-DATABASE_PREFIX = settings.POSTGRES_SYNC_PREFIX
-
-sync_engine = create_engine(DATABASE_PREFIX + DATABASE_URI)
-local_session = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
-
+DATABASE_PREFIX = settings.POSTGRES_ASYNC_PREFIX
+async_engine = create_async_engine(DATABASE_PREFIX + DATABASE_URI)
+async_session_factory = async_sessionmaker(autocommit=False, autoflush=False, bind=async_engine, class_=AsyncSession)
 
 fake = Faker()
 
-
 @pytest.fixture(scope="session")
-def client() -> Generator[TestClient, Any, None]:
-    with TestClient(app) as _client:
+async def client() -> AsyncGenerator[AsyncClient, Any]:
+    # Actualizado a AsyncClient para soportar la naturaleza asíncrona de la app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as _client:
         yield _client
     app.dependency_overrides = {}
-    sync_engine.dispose()
-
+    await async_engine.dispose()
 
 @pytest.fixture
-def db() -> Generator[Session, Any, None]:
-    session = local_session()
-    yield session
-    session.close()
-
+async def db() -> AsyncGenerator[AsyncSession, Any]:
+    # Fixture de base de datos ahora es asíncrona
+    async with async_session_factory() as session:
+        yield session
+        await session.close()
 
 def override_dependency(dependency: Callable[..., Any], mocked_response: Any) -> None:
     app.dependency_overrides[dependency] = lambda: mocked_response
 
-
 @pytest.fixture
 def mock_db():
     """Mock database session for unit tests."""
-    return Mock(spec=AsyncSession)
-
+    return AsyncMock(spec=AsyncSession)
 
 @pytest.fixture
 def mock_redis():
@@ -56,7 +49,6 @@ def mock_redis():
     mock_redis.set = AsyncMock(return_value=True)
     mock_redis.delete = AsyncMock(return_value=True)
     return mock_redis
-
 
 @pytest.fixture
 def sample_user_data():
@@ -68,12 +60,10 @@ def sample_user_data():
         "password": fake.password(),
     }
 
-
 @pytest.fixture
 def sample_user_read():
     """Generate a sample UserRead object."""
     from uuid6 import uuid7
-
     from src.app.schemas.user import UserRead
 
     return UserRead(
@@ -89,7 +79,6 @@ def sample_user_read():
         tier_id=None,
     )
 
-
 @pytest.fixture
 def current_user_dict():
     """Mock current user from auth dependency."""
@@ -100,3 +89,4 @@ def current_user_dict():
         "name": fake.name(),
         "is_superuser": False,
     }
+

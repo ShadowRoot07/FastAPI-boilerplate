@@ -19,7 +19,6 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_DB: postgres
-          # Esto permite conectar sin contraseña en el entorno de pruebas
           POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
@@ -36,13 +35,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Run Project Setup
         run: python setup.py local
@@ -55,10 +54,10 @@ jobs:
           POSTGRES_SERVER: localhost
           POSTGRES_PORT: 5432
           POSTGRES_USER: postgres
-          # Mandamos vacío para que coincida con el modo 'trust'
           POSTGRES_PASSWORD: ""
           POSTGRES_DB: postgres
           REDIS_CACHE_HOST: localhost
           REDIS_RATE_LIMIT_HOST: localhost
+          # Forzamos a pytest a usar el entorno de uv
         run: uv run pytest
 
