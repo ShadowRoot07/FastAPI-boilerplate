@@ -9,7 +9,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# Necesitamos permisos de escritura para que la acción pueda comentar en el PR si es necesario
 permissions:
   contents: read
   pull-requests: write
@@ -63,20 +62,21 @@ jobs:
           POSTGRES_DB: postgres
           REDIS_CACHE_HOST: localhost
           REDIS_RATE_LIMIT_HOST: localhost
-        # Generamos el reporte en formato XML para que las acciones lo lean fácilmente
-        run: uv run pytest --cov=src --cov-report=xml --cov-report=term-missing
+        # Generamos el XML que usará la siguiente acción
+        run: uv run pytest --cov=src --cov-report=xml
 
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
+      - name: Code Coverage Summary Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          name: code-coverage-report
-          path: coverage.xml
-
-      - name: Pytest coverage comment
-        if: github.event_name == 'pull_request'
-        uses: mshick/google-cloud-worker-action@v2 # Nota: He usado una genérica compatible, pero 'py-cov-action' es muy común.
-        with:
-          # Esta sección genera un resumen visual en el PR
-          # Si prefieres algo más simple, el reporte 'term-missing' ya saldrá en los logs de GitHub.
           filename: coverage.xml
+          badge: true
+          fail_below_min: false
+          format: markdown
+          output: both
+
+      - name: Add Coverage PR Comment
+        uses: maroon1/pytest-coverage-comment@v1.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          pytest-coverage-path: ./coverage.xml
 
