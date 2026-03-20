@@ -13,7 +13,7 @@ async def test_real_database_connection():
     host = os.getenv("POSTGRES_SERVER", "localhost")
     port = os.getenv("POSTGRES_PORT", "5432")
     user = "postgres"
-    password = "password"
+    password = "pass"
     db = "fastapi_db"
     
     # URL para asyncpg
